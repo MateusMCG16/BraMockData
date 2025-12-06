@@ -1,0 +1,11 @@
+@use '@carbon/styles/scss/config' with (
+  $font-path: '@carbon/styles/fonts'
+);
+@use '@carbon/styles';
+@use '@carbon/react';
+
+body {
+  background-color: var(--cds-background);
+  color: var(--cds-text-primary);
+  font-family: 'IBM Plex Sans', sans-serif;
+}

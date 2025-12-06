@@ -1,0 +1,41 @@
+@use '@carbon/styles/scss/grid';
+@use '@carbon/styles/scss/spacing';
+
+:global(#root) {
+    height: 100vh;
+    width: 100vw;
+    overflow-x: hidden;
+}
+
+.app-theme {
+    min-height: 100vh;
+    width: 100%;
+    background-color: var(--cds-background);
+    display: flex;
+    flex-direction: column;
+}
+
+.app-content {
+    padding: spacing.$spacing-05;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    margin-top: 3rem; // Space for fixed header
+    flex: 1;
+}
+
+.generator-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: spacing.$spacing-05;
+    margin-top: spacing.$spacing-07;
+}
+
+.generator-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    // Ensure card background is correct layer for g100
+    background-color: var(--cds-layer-01);
+}
