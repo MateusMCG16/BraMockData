@@ -22,12 +22,13 @@
     margin: 0 auto;
     margin-top: 3rem; // Space for fixed header
     flex: 1;
+    padding-bottom: spacing.$spacing-10;
 }
 
 .generator-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: spacing.$spacing-05;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: spacing.$spacing-06;
     margin-top: spacing.$spacing-07;
 }
 
