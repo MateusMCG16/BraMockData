@@ -1,7 +1,17 @@
 import React from 'react';
 import { Header, HeaderName, Content, Theme, RadioButton, RadioButtonGroup } from '@carbon/react';
 import GeneratorCard from './components/GeneratorCard';
-import { generateCPF, generateCNPJ, generateRG, generatePhone } from './utils/generators';
+import {
+    generateCPF,
+    generateCNPJ,
+    generateRG,
+    generatePhone,
+    generateCEP,
+    generateCreditCard,
+    generateDate,
+    generateEmail,
+    generateName
+} from './utils/generators';
 import './App.scss';
 
 function App() {
@@ -16,13 +26,18 @@ function App() {
         <div style={{ marginTop: '2rem' }}>
           <h1 style={{ marginBottom: '0.5rem', fontWeight: 300 }}>Brazilian Mock Data</h1>
           <p style={{ marginBottom: '2rem', color: 'var(--cds-text-secondary)' }}>
-            Generate valid random documents for testing purposes.
+            Generate valid random documents and data for testing purposes.
           </p>
         </div>
         <div className="generator-grid">
           <GeneratorCard title="CPF" generator={generateCPF} />
           <GeneratorCard title="CNPJ" generator={generateCNPJ} />
           <GeneratorCard title="RG" generator={generateRG} />
+          <GeneratorCard title="CEP" generator={generateCEP} />
+          <GeneratorCard title="Cartão de Crédito" generator={generateCreditCard} />
+          <GeneratorCard title="Data" generator={generateDate} />
+          <GeneratorCard title="Email" generator={generateEmail} />
+          <GeneratorCard title="Nome" generator={generateName} />
           <GeneratorCard
             title="Telefone"
             generator={generatePhone}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tile, Button, TextInput, CopyButton, Toggle } from '@carbon/react';
 import { Renew } from '@carbon/icons-react';
 
@@ -8,12 +8,8 @@ const GeneratorCard = ({ title, generator, optionsComponent }) => {
     const [optionsState, setOptionsState] = useState({});
 
     const handleGenerate = () => {
-        // Pass optionsState to the generator if it accepts it
-        // We assume the generator signature is (formatted, ...options) or similar, 
-        // but since we only have one case with options (phone), we can adapt.
-        // For phone: generator(formatted, type)
-        // For others: generator(formatted)
-
+        // Pass optionsState to the generator if it accepts it.
+        // Currently only 'Telefone' uses options, but this structure allows expansion.
         if (title === 'Telefone') {
             setValue(generator(formatted, optionsState.type || 'any'));
         } else {
@@ -21,51 +17,71 @@ const GeneratorCard = ({ title, generator, optionsComponent }) => {
         }
     };
 
-    // Regenerate when format changes if we already have a value
-    React.useEffect(() => {
+    // Regenerate when format or options change, only if value exists
+    useEffect(() => {
         if (value) {
             handleGenerate();
         }
-    }, [formatted, optionsState]); // Also regenerate when options change
+    }, [formatted, optionsState]);
 
     return (
-        <Tile className="generator-card">
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h4>{title}</h4>
+        <Tile className="generator-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.5rem'
+            }}>
+                <h4 style={{ margin: 0 }}>{title}</h4>
                 <Toggle
                     id={`toggle-${title}`}
-                    size="sm"
-                    labelText="Format"
+                    aria-label="Toggle format"
+                    labelText="Formatar"
+                    labelA="Raw"
+                    labelB="Fmt"
                     toggled={formatted}
                     onToggle={() => setFormatted(!formatted)}
                 />
             </div>
 
-            {optionsComponent && (
-                <div style={{ marginBottom: '1rem' }}>
-                    {optionsComponent(optionsState, setOptionsState)}
-                </div>
-            )}
+            <div style={{ flexGrow: 1 }}>
+                {optionsComponent && (
+                    <div style={{ marginBottom: '1rem' }}>
+                        {optionsComponent(optionsState, setOptionsState)}
+                    </div>
+                )}
 
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', marginBottom: '1rem' }}>
-                <TextInput
-                    id={`input-${title}`}
-                    labelText=""
-                    value={value}
-                    readOnly
-                    placeholder="Click generate"
-                    style={{ flexGrow: 1 }}
-                />
-                <CopyButton
-                    iconDescription="Copy to clipboard"
-                    feedback="Copied!"
-                    onClick={() => {
-                        if (value) navigator.clipboard.writeText(value);
-                    }}
-                />
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    gap: '0.5rem',
+                    marginBottom: '1.5rem'
+                }}>
+                    <TextInput
+                        id={`input-${title}`}
+                        labelText="Result"
+                        hideLabel
+                        value={value}
+                        readOnly
+                        placeholder="Click generate"
+                        style={{ flexGrow: 1 }}
+                    />
+                    <CopyButton
+                        iconDescription="Copy to clipboard"
+                        feedback="Copied!"
+                        onClick={() => {
+                            if (value) navigator.clipboard.writeText(value);
+                        }}
+                    />
+                </div>
             </div>
 
-            <Button renderIcon={Renew} onClick={handleGenerate} isExpressive>
+            <Button
+                renderIcon={Renew}
+                onClick={handleGenerate}
+                isExpressive
+                style={{ width: '100%' }}
+            >
                 Generate
             </Button>
         </Tile>
