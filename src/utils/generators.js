@@ -1,3 +1,11 @@
+const onlyDigits = (value) => String(value).replace(/\D/g, '');
+
+export const formatCPF = (value, formatted = true) => {
+    const digits = onlyDigits(value);
+    return formatted
+        ? digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+        : digits;
+};
 
 export const generateCPF = (formatted = true) => {
     const randomDigit = () => Math.floor(Math.random() * 10);
@@ -16,10 +24,14 @@ export const generateCPF = (formatted = true) => {
     digits.push(calculateDigit(digits));
     digits.push(calculateDigit(digits));
 
-    const cpf = digits.join('');
+    return formatCPF(digits.join(''), formatted);
+};
+
+export const formatCNPJ = (value, formatted = true) => {
+    const digits = onlyDigits(value);
     return formatted
-        ? cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-        : cpf;
+        ? digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+        : digits;
 };
 
 export const generateCNPJ = (formatted = true) => {
@@ -42,10 +54,14 @@ export const generateCNPJ = (formatted = true) => {
     digits.push(calculateDigit(digits));
     digits.push(calculateDigit(digits));
 
-    const cnpj = digits.join('');
+    return formatCNPJ(digits.join(''), formatted);
+};
+
+export const formatRG = (value, formatted = true) => {
+    const digits = onlyDigits(value);
     return formatted
-        ? cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
-        : cnpj;
+        ? digits.replace(/(\d{2})(\d{3})(\d{3})(\d{1})/, '$1.$2.$3-$4')
+        : digits;
 };
 
 export const generateRG = (formatted = true) => {
@@ -55,13 +71,21 @@ export const generateRG = (formatted = true) => {
     // Check digit for RG is often X or 0-9, but let's just do random 0-9 for simplicity as validation varies wildly
     digits.push(randomDigit());
 
-    const rg = digits.join('');
-    return formatted
-        ? rg.replace(/(\d{2})(\d{3})(\d{3})(\d{1})/, '$1.$2.$3-$4')
-        : rg;
+    return formatRG(digits.join(''), formatted);
 };
 
-export const generatePhone = (formatted = true, type = 'any') => {
+export const formatPhone = (value, formatted = true) => {
+    const digits = onlyDigits(value);
+    if (!formatted) return digits;
+
+    if (digits.length === 11) {
+        return digits.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+    return digits.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+};
+
+export const generatePhone = (formatted = true, typeOrOptions = 'any') => {
+    const type = typeof typeOrOptions === 'string' ? typeOrOptions : typeOrOptions?.type || 'any';
     const randomDigit = () => Math.floor(Math.random() * 10);
     // DDD between 11 and 99
     const ddd = Math.floor(Math.random() * (99 - 11 + 1)) + 11;
@@ -88,24 +112,27 @@ export const generatePhone = (formatted = true, type = 'any') => {
         for (let i = 0; i < 7; i++) numberPart += randomDigit();
     }
 
-    const fullNumber = `${ddd}${numberPart}`;
+    return formatPhone(`${ddd}${numberPart}`, formatted);
+};
 
-    if (!formatted) return fullNumber;
-
-    if (isMobile) {
-        return fullNumber.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    } else {
-        return fullNumber.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-    }
+export const formatCEP = (value, formatted = true) => {
+    const digits = onlyDigits(value);
+    return formatted
+        ? digits.replace(/(\d{5})(\d{3})/, '$1-$2')
+        : digits;
 };
 
 export const generateCEP = (formatted = true) => {
     const randomDigit = () => Math.floor(Math.random() * 10);
     const digits = Array.from({ length: 8 }, randomDigit);
-    const cep = digits.join('');
+    return formatCEP(digits.join(''), formatted);
+};
+
+export const formatCreditCard = (value, formatted = true) => {
+    const digits = onlyDigits(value);
     return formatted
-        ? cep.replace(/(\d{5})(\d{3})/, '$1-$2')
-        : cep;
+        ? digits.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')
+        : digits;
 };
 
 export const generateCreditCard = (formatted = true) => {
@@ -128,10 +155,23 @@ export const generateCreditCard = (formatted = true) => {
     const checkDigit = (sum * 9) % 10;
     digits.push(checkDigit);
 
-    const cc = digits.join('');
-    return formatted
-        ? cc.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')
-        : cc;
+    return formatCreditCard(digits.join(''), formatted);
+};
+
+export const formatDate = (value, formatted = true) => {
+    const raw = String(value);
+    const brMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (brMatch) {
+        const [, day, month, year] = brMatch;
+        return formatted ? `${day}/${month}/${year}` : `${year}-${month}-${day}`;
+    }
+    if (isoMatch) {
+        const [, year, month, day] = isoMatch;
+        return formatted ? `${day}/${month}/${year}` : `${year}-${month}-${day}`;
+    }
+    return raw;
 };
 
 export const generateDate = (formatted = true) => {
@@ -144,10 +184,7 @@ export const generateDate = (formatted = true) => {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
 
-    if (formatted) {
-        return `${day}/${month}/${year}`;
-    }
-    return `${year}-${month}-${day}`;
+    return formatDate(`${year}-${month}-${day}`, formatted);
 };
 
 export const generateEmail = () => {
