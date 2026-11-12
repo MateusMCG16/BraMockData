@@ -6,7 +6,7 @@ function Card({ className, ...props }) {
     <div
       data-slot="card"
       className={cn(
-        'bg-card text-card-foreground flex flex-col gap-5 rounded-xl border py-5 shadow-sm',
+        'bg-card text-card-foreground flex flex-col gap-3 rounded-xl border py-3.5 shadow-sm',
         className
       )}
       {...props}
@@ -18,7 +18,7 @@ function CardHeader({ className, ...props }) {
   return (
     <div
       data-slot="card-header"
-      className={cn('flex items-start justify-between gap-2 px-5', className)}
+      className={cn('flex items-start justify-between gap-2 px-4', className)}
       {...props}
     />
   )
@@ -38,7 +38,7 @@ function CardDescription({ className, ...props }) {
   return (
     <div
       data-slot="card-description"
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn('text-muted-foreground text-xs leading-snug', className)}
       {...props}
     />
   )
@@ -48,7 +48,7 @@ function CardContent({ className, ...props }) {
   return (
     <div
       data-slot="card-content"
-      className={cn('px-5 flex-1', className)}
+      className={cn('px-4 flex-1', className)}
       {...props}
     />
   )
@@ -58,7 +58,7 @@ function CardFooter({ className, ...props }) {
   return (
     <div
       data-slot="card-footer"
-      className={cn('flex items-center px-5', className)}
+      className={cn('flex items-center px-4', className)}
       {...props}
     />
   )

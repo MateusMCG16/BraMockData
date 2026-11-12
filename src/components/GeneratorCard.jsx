@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Check, Copy, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -14,11 +16,13 @@ import { Label } from '@/components/ui/label'
 
 const GeneratorCard = ({
   title,
+  description,
   generator,
   formatter,
   supportsFormat = true,
   optionsComponent,
   initialOptions = {},
+  className,
 }) => {
   const [value, setValue] = useState('')
   const [formatted, setFormatted] = useState(true)
@@ -73,20 +77,29 @@ const GeneratorCard = ({
     }
   }
 
-  const switchId = `format-${title.toLowerCase().replace(/\s+/g, '-')}`
-  const inputId = `result-${title.toLowerCase().replace(/\s+/g, '-')}`
+  const slug = title.toLowerCase().replace(/\s+/g, '-')
+  const switchId = `format-${slug}`
+  const inputId = `result-${slug}`
 
   return (
-    <Card className="h-full transition-colors hover:border-foreground/20">
-      <CardHeader className="items-center">
-        <CardTitle className="text-base">{title}</CardTitle>
+    <Card
+      className={cn(
+        'h-full transition-colors hover:border-foreground/20',
+        className
+      )}
+    >
+      <CardHeader className="items-start">
+        <div className="space-y-0.5">
+          <CardTitle className="text-sm">{title}</CardTitle>
+          {description && <CardDescription>{description}</CardDescription>}
+        </div>
         {supportsFormat && (
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             <Label
               htmlFor={switchId}
-              className="text-xs text-muted-foreground cursor-pointer"
+              className="text-[11px] text-muted-foreground cursor-pointer"
             >
-              {formatted ? 'Formatado' : 'Bruto'}
+              {formatted ? 'Fmt' : 'Bruto'}
             </Label>
             <Switch
               id={switchId}
@@ -98,34 +111,33 @@ const GeneratorCard = ({
         )}
       </CardHeader>
 
-      <CardContent className="flex flex-col justify-end gap-4">
-        {optionsComponent && (
+      <CardContent className="flex flex-col justify-between gap-2.5">
+        {optionsComponent ? (
           <div>{optionsComponent(optionsState, handleOptionsChange)}</div>
+        ) : (
+          <div />
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Input
             id={inputId}
             aria-label={`Resultado de ${title}`}
             value={value}
             readOnly
             placeholder="Clique em gerar"
-            className="font-mono text-sm"
+            className="h-8 font-mono text-[13px]"
           />
           <Button
             type="button"
             variant="outline"
             size="icon"
+            className="size-8 shrink-0"
             onClick={handleCopy}
             disabled={!value}
             aria-label={copied ? `${title} copiado` : `Copiar ${title}`}
             title={copied ? 'Copiado!' : 'Copiar'}
           >
-            {copied ? (
-              <Check className="text-emerald-500" />
-            ) : (
-              <Copy />
-            )}
+            {copied ? <Check className="text-emerald-500" /> : <Copy />}
           </Button>
         </div>
       </CardContent>
@@ -133,6 +145,7 @@ const GeneratorCard = ({
       <CardFooter>
         <Button
           type="button"
+          size="sm"
           className="w-full"
           onClick={() => handleGenerate()}
         >
