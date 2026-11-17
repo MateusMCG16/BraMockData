@@ -1,159 +1,115 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Check, Copy, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { useState, useRef, useEffect, useId, useImperativeHandle } from 'react'
+import { AlertCircle, Check, Copy, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
-const GeneratorCard = ({
-  title,
-  description,
-  generator,
-  formatter,
-  supportsFormat = true,
-  optionsComponent,
-  initialOptions = {},
-  className,
-}) => {
+const GeneratorCard = (props) => {
+  const {
+    ref, id, title, description, icon: Icon, generator, formatter,
+    optionsComponent: Options, initialOptions = {}, active,
+  } = props
   const [value, setValue] = useState('')
   const [formatted, setFormatted] = useState(true)
-  const [optionsState, setOptionsState] = useState(initialOptions)
-  const [copied, setCopied] = useState(false)
-  const copyTimeoutRef = useRef(null)
+  const [options, setOptions] = useState(initialOptions)
+  const [copyState, setCopyState] = useState('idle')
+  const copyTimeout = useRef(null)
+  const valueVersion = useRef(0)
+  const fieldId = useId()
 
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-    }
+  useEffect(() => () => {
+    valueVersion.current += 1
+    clearTimeout(copyTimeout.current)
   }, [])
 
-  const handleGenerate = (nextFormatted = formatted, nextOptions = optionsState) => {
-    setValue(generator(nextFormatted, nextOptions))
-    setCopied(false)
+  const resetCopy = () => {
+    valueVersion.current += 1
+    clearTimeout(copyTimeout.current)
+    setCopyState('idle')
   }
+
+  const handleGenerate = (nextFormatted = formatted, nextOptions = options) => {
+    resetCopy()
+    setValue(generator(nextFormatted, nextOptions))
+  }
+
+  useImperativeHandle(ref, () => ({ generate: () => handleGenerate() }))
 
   const handleFormatChange = (checked) => {
+    resetCopy()
     setFormatted(checked)
-    if (!value) return
-
-    if (formatter) {
-      setValue(formatter(value, checked))
-    } else {
-      handleGenerate(checked, optionsState)
-    }
+    if (value) setValue(formatter(value, checked))
   }
 
-  const handleOptionsChange = (updater) => {
-    const nextOptions =
-      typeof updater === 'function' ? updater(optionsState) : updater
-    setOptionsState(nextOptions)
-    if (value) {
-      handleGenerate(formatted, nextOptions)
-    }
+  const handleOptionsChange = (nextOptions) => {
+    setOptions(nextOptions)
+    if (value) handleGenerate(formatted, nextOptions)
   }
 
   const handleCopy = async () => {
-    if (!value || !navigator.clipboard) return
+    if (!value) return
+    const version = valueVersion.current
     try {
       await navigator.clipboard.writeText(value)
-      setCopied(true)
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 1800)
+      if (version !== valueVersion.current) return
+      setCopyState('copied')
+      clearTimeout(copyTimeout.current)
+      copyTimeout.current = setTimeout(() => setCopyState('idle'), 1800)
     } catch {
-      setCopied(false)
+      if (version === valueVersion.current) setCopyState('error')
     }
   }
 
-  const slug = title.toLowerCase().replace(/\s+/g, '-')
-  const switchId = `format-${slug}`
-  const inputId = `result-${slug}`
+  const copyLabel = copyState === 'copied'
+    ? `${title} copiado`
+    : copyState === 'error' ? 'Não foi possível copiar. Selecione o resultado e copie manualmente.' : `Copiar ${title}`
 
   return (
-    <Card
-      className={cn(
-        'h-full transition-colors hover:border-foreground/20',
-        className
-      )}
-    >
-      <CardHeader className="items-start">
-        <div className="space-y-0.5">
-          <CardTitle className="text-sm">{title}</CardTitle>
-          {description && <CardDescription>{description}</CardDescription>}
+    <article id={`generator-${id}`} className="generator-row" data-active={active}
+      aria-labelledby={`${fieldId}-title`}>
+      <div className="generator-identity">
+        <span className="generator-icon"><Icon aria-hidden="true" /></span>
+        <div>
+          <h2 id={`${fieldId}-title`}>{title}</h2>
+          <p>{description}</p>
         </div>
-        {supportsFormat && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Label
-              htmlFor={switchId}
-              className="text-[11px] text-muted-foreground cursor-pointer"
-            >
-              {formatted ? 'Fmt' : 'Bruto'}
-            </Label>
-            <Switch
-              id={switchId}
-              checked={formatted}
-              onCheckedChange={handleFormatChange}
-              aria-label={`Alternar formatação de ${title}`}
-            />
-          </div>
-        )}
-      </CardHeader>
+      </div>
 
-      <CardContent className="flex flex-col justify-between gap-2.5">
-        {optionsComponent ? (
-          <div>{optionsComponent(optionsState, handleOptionsChange)}</div>
-        ) : (
-          <div />
-        )}
+      <div className="generator-options">
+        <span className="mobile-field-label">Configurações</span>
+        <Options options={options} onChange={handleOptionsChange} />
+      </div>
 
-        <div className="flex items-center gap-1.5">
-          <Input
-            id={inputId}
-            aria-label={`Resultado de ${title}`}
-            value={value}
-            readOnly
-            placeholder="Clique em gerar"
-            className="h-8 font-mono text-[13px]"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-8 shrink-0"
-            onClick={handleCopy}
-            disabled={!value}
-            aria-label={copied ? `${title} copiado` : `Copiar ${title}`}
-            title={copied ? 'Copiado!' : 'Copiar'}
-          >
-            {copied ? <Check className="text-emerald-500" /> : <Copy />}
-          </Button>
-        </div>
-      </CardContent>
+      <div className="generator-result">
+        <Label className="mobile-field-label" htmlFor={`${fieldId}-result`}>Resultado</Label>
+        <Input id={`${fieldId}-result`} aria-label={`Resultado de ${title}`}
+          value={value} readOnly placeholder="Clique em gerar" className="result-input"
+          onFocus={(event) => event.target.select()} />
+        <span className={`copy-feedback ${copyState === 'error' ? 'copy-error' : ''}`}
+          role="status" aria-live="polite">
+          {copyState === 'copied' ? 'Copiado para a área de transferência' : copyState === 'error' ? 'Selecione o resultado para copiar manualmente' : ''}
+        </span>
+      </div>
 
-      <CardFooter>
-        <Button
-          type="button"
-          size="sm"
-          className="w-full"
-          onClick={() => handleGenerate()}
-        >
-          <RefreshCw />
-          Gerar
+      <div className="generator-format">
+        <Label className="mobile-field-label" htmlFor={`${fieldId}-format`}>Usar máscara</Label>
+        <Switch id={`${fieldId}-format`} checked={formatted}
+          onCheckedChange={handleFormatChange} aria-label={`Usar máscara em ${title}`} />
+      </div>
+
+      <div className="generator-actions">
+        <Button type="button" variant="outline" className="generate-button"
+          onClick={() => handleGenerate()} aria-label={`Gerar ${title}`}>
+          <RefreshCw aria-hidden="true" /><span>Gerar</span>
         </Button>
-      </CardFooter>
-    </Card>
+        <Button type="button" variant="ghost" size="icon" className="copy-button"
+          data-copy-state={copyState} onClick={handleCopy} disabled={!value}
+          aria-label={copyLabel} title={copyLabel}>
+          {copyState === 'copied' ? <Check /> : copyState === 'error' ? <AlertCircle /> : <Copy />}
+        </Button>
+      </div>
+    </article>
   )
 }
 

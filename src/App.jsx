@@ -1,309 +1,208 @@
-import React, { useEffect, useState } from 'react'
-import { Braces, Moon, Sun } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  Braces, Building2, CalendarDays, CreditCard, Fingerprint,
+  MapPin, Moon, RefreshCw, ShieldCheck, Smartphone, Sun,
+} from 'lucide-react'
 import GeneratorCard from '@/components/GeneratorCard'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import {
-  BRAZIL_DDDS_BY_UF,
-  CARD_BRANDS,
-  CEP_REGIONS,
-  CPF_REGIONS,
-  DATE_PRESETS,
-  formatCEP,
-  formatCNPJ,
-  formatCPF,
-  formatCreditCard,
-  formatDate,
-  formatPhone,
-  formatRG,
-  generateCEP,
-  generateCNPJ,
-  generateCPF,
-  generateCreditCard,
-  generateDate,
-  generatePhone,
-  generateRG,
+  BRAZIL_DDDS_BY_UF, CARD_BRANDS, CEP_REGIONS, CPF_REGIONS, DATE_PRESETS,
+  formatCEP, formatCNPJ, formatCPF, formatCreditCard, formatDate, formatPhone, formatRG,
+  generateCEP, generateCNPJ, generateCPF, generateCreditCard, generateDate,
+  generatePhone, generateRG,
 } from '@/utils/generators'
 
 const UFS = Object.keys(BRAZIL_DDDS_BY_UF).sort()
 
+function Choice({ label, value, onChange, items }) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger size="sm" aria-label={label} className="option-select"
+        title={items.find((item) => item.code === value)?.label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map(({ code, label: itemLabel }) => (
+          <SelectItem key={code} value={code}>{itemLabel}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+function ToggleOption({ id, label, checked, onChange }) {
+  return (
+    <div className="toggle-option">
+      <Label htmlFor={id}>{label}</Label>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
+    </div>
+  )
+}
+
+const GENERATORS = [
+  {
+    id: 'cpf', title: 'CPF', description: 'Pessoa física', icon: Fingerprint,
+    generator: generateCPF, formatter: formatCPF, initialOptions: { region: 'any' },
+    optionsComponent: ({ options: state, onChange: update }) => (
+      <Choice label="Região fiscal do CPF" value={state.region}
+        onChange={(region) => update({ ...state, region })} items={CPF_REGIONS} />
+    ),
+  },
+  {
+    id: 'cnpj', title: 'CNPJ', description: 'Pessoa jurídica', icon: Building2,
+    generator: generateCNPJ, formatter: formatCNPJ,
+    initialOptions: { alphanumeric: false, branchMode: '0001' },
+    optionsComponent: ({ options: state, onChange: update }) => (
+      <div className="option-pair cnpj-options">
+        <Choice label="Ordem/filial do CNPJ" value={state.branchMode}
+          onChange={(branchMode) => update({ ...state, branchMode })}
+          items={[{ code: '0001', label: 'Matriz (0001)' }, { code: 'random', label: 'Filial aleatória' }]} />
+        <ToggleOption id="cnpj-alnum" label="Alfanumérico" checked={state.alphanumeric}
+          onChange={(alphanumeric) => update({ ...state, alphanumeric })} />
+      </div>
+    ),
+  },
+  {
+    id: 'rg', title: 'RG', description: 'Padrão SSP-SP', icon: ShieldCheck,
+    generator: generateRG, formatter: formatRG, initialOptions: { allowX: true },
+    optionsComponent: ({ options: state, onChange: update }) => (
+      <ToggleOption id="rg-allow-x" label='Permitir dígito "X"' checked={state.allowX}
+        onChange={(allowX) => update({ ...state, allowX })} />
+    ),
+  },
+  {
+    id: 'cep', title: 'CEP', description: 'Código postal', icon: MapPin,
+    generator: generateCEP, formatter: formatCEP, initialOptions: { region: 'any' },
+    optionsComponent: ({ options: state, onChange: update }) => (
+      <Choice label="Região postal do CEP" value={state.region}
+        onChange={(region) => update({ ...state, region })} items={CEP_REGIONS} />
+    ),
+  },
+  {
+    id: 'card', title: 'Cartão', description: 'Número com Luhn', icon: CreditCard,
+    generator: generateCreditCard, formatter: formatCreditCard, initialOptions: { brand: 'any' },
+    optionsComponent: ({ options: state, onChange: update }) => (
+      <Choice label="Bandeira do cartão" value={state.brand}
+        onChange={(brand) => update({ ...state, brand })} items={CARD_BRANDS} />
+    ),
+  },
+  {
+    id: 'date', title: 'Data', description: 'Datas e períodos', icon: CalendarDays,
+    generator: generateDate, formatter: formatDate, initialOptions: { preset: 'any' },
+    optionsComponent: ({ options: state, onChange: update }) => (
+      <Choice label="Período da data" value={state.preset}
+        onChange={(preset) => update({ ...state, preset })} items={DATE_PRESETS} />
+    ),
+  },
+  {
+    id: 'phone', title: 'Telefone', description: 'Fixo e celular', icon: Smartphone,
+    generator: generatePhone, formatter: formatPhone, initialOptions: { type: 'any', uf: 'any' },
+    optionsComponent: ({ options: state, onChange: update }) => (
+      <div className="option-pair">
+        <Choice label="Tipo de telefone" value={state.type}
+          onChange={(type) => update({ ...state, type })}
+          items={[{ code: 'any', label: 'Qualquer tipo' }, { code: 'mobile', label: 'Celular' }, { code: 'landline', label: 'Fixo' }]} />
+        <Choice label="Estado do DDD" value={state.uf}
+          onChange={(uf) => update({ ...state, uf })}
+          items={[{ code: 'any', label: 'Todos os DDDs' }, ...UFS.map((uf) => ({
+            code: uf, label: `${uf} (${BRAZIL_DDDS_BY_UF[uf].join(', ')})`,
+          }))]} />
+      </div>
+    ),
+  },
+]
+
 function App() {
+  const [activeGenerator, setActiveGenerator] = useState('cpf')
+  const generatorRefs = useRef({})
   const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme')
-    return saved ? saved === 'dark' : true
+    try {
+      const saved = localStorage.getItem('theme')
+      return saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+    } catch {
+      return false
+    }
   })
 
   useEffect(() => {
-    const root = document.documentElement
-    root.classList.toggle('dark', darkMode)
-    localStorage.setItem('theme', darkMode ? 'dark' : 'light')
+    document.documentElement.classList.toggle('dark', darkMode)
+    try {
+      localStorage.setItem('theme', darkMode ? 'dark' : 'light')
+    } catch {
+      // The theme still works when browser storage is unavailable.
+    }
   }, [darkMode])
 
-  return (
-    <div className="min-h-dvh flex flex-col bg-background text-foreground">
-      <header className="border-b bg-background/90 backdrop-blur-md">
-        <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Braces className="size-3.5" />
-            </div>
-            <h1 className="text-sm font-semibold tracking-tight whitespace-nowrap">
-              Brazilian Mock Data
-            </h1>
-            <span className="hidden truncate text-xs text-muted-foreground md:inline">
-              — Gere documentos e dados brasileiros válidos para testes
-            </span>
-          </div>
+  const generateAll = () => {
+    Object.values(generatorRefs.current).forEach((generator) => generator?.generate())
+  }
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
-            onClick={() => setDarkMode((prev) => !prev)}
-            aria-label={darkMode ? 'Ativar tema claro' : 'Ativar tema escuro'}
-            title={darkMode ? 'Tema claro' : 'Tema escuro'}
-          >
-            {darkMode ? <Sun /> : <Moon />}
-          </Button>
+  return (
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="header-inner">
+          <a className="brand" href="./" aria-label="Brazilian Mock Data, início">
+            <span className="brand-mark"><Braces aria-hidden="true" /></span>
+            <span>Brazilian <strong>Mock Data</strong></span>
+          </a>
+          <div className="header-actions">
+            <span className="local-badge"><span />100% local</span>
+            <span className="header-divider" />
+            <Button type="button" variant="ghost" size="icon" className="theme-button"
+              onClick={() => setDarkMode((previous) => !previous)}
+              aria-label={darkMode ? 'Ativar tema claro' : 'Ativar tema escuro'}
+              title={darkMode ? 'Ativar tema claro' : 'Ativar tema escuro'}>
+              {darkMode ? <Sun /> : <Moon />}
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 items-center px-4 py-4 sm:px-6">
-        <section className="grid w-full grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-          <GeneratorCard
-            title="CPF"
-            description="Módulo 11 sem dígitos repetidos"
-            generator={generateCPF}
-            formatter={formatCPF}
-            initialOptions={{ region: 'any' }}
-            optionsComponent={(state, setState) => (
-              <Select
-                value={state.region || 'any'}
-                onValueChange={(value) => setState({ ...state, region: value })}
-              >
-                <SelectTrigger size="sm" aria-label="Região fiscal do CPF">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CPF_REGIONS.map((item) => (
-                    <SelectItem key={item.code} value={item.code}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
+      <main className="workspace">
+        <div className="workspace-heading">
+          <div>
+            <h1>Dados de teste, sem complicação.</h1>
+            <p>Escolha, gere e copie. O resto fica com a gente.</p>
+          </div>
+          <Button type="button" className="generate-all" onClick={generateAll}>
+            <RefreshCw aria-hidden="true" />Gerar todos
+          </Button>
+        </div>
 
-          <GeneratorCard
-            title="CNPJ"
-            description="Numérico ou alfanumérico (RFB)"
-            generator={generateCNPJ}
-            formatter={formatCNPJ}
-            initialOptions={{ alphanumeric: false, branchMode: '0001' }}
-            optionsComponent={(state, setState) => (
-              <div className="flex items-center gap-2">
-                <Select
-                  value={state.branchMode || '0001'}
-                  onValueChange={(value) =>
-                    setState({ ...state, branchMode: value })
-                  }
-                >
-                  <SelectTrigger size="sm" aria-label="Ordem/filial do CNPJ">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0001">Matriz (0001)</SelectItem>
-                    <SelectItem value="random">Filial aleatória</SelectItem>
-                  </SelectContent>
-                </Select>
+        <nav className="generator-nav" aria-label="Selecionar gerador">
+          {GENERATORS.map((item) => {
+            const { id, title, icon: Icon } = item
+            return (
+              <button key={id} type="button" className="generator-tab"
+                aria-pressed={activeGenerator === id}
+                aria-controls={`generator-${id}`}
+                onClick={() => setActiveGenerator(id)}>
+                <Icon aria-hidden="true" /><span>{title}</span>
+              </button>
+            )
+          })}
+        </nav>
 
-                <div className="flex shrink-0 items-center gap-1.5 rounded-md border px-2 h-8">
-                  <Label
-                    htmlFor="cnpj-alnum"
-                    className="text-[11px] text-muted-foreground cursor-pointer whitespace-nowrap"
-                  >
-                    Alfanum
-                  </Label>
-                  <Switch
-                    id="cnpj-alnum"
-                    checked={Boolean(state.alphanumeric)}
-                    onCheckedChange={(checked) =>
-                      setState({ ...state, alphanumeric: checked })
-                    }
-                  />
-                </div>
-              </div>
-            )}
-          />
-
-          <GeneratorCard
-            title="RG"
-            description="Padrão SSP-SP (Módulo 11)"
-            generator={generateRG}
-            formatter={formatRG}
-            initialOptions={{ allowX: true }}
-            optionsComponent={(state, setState) => (
-              <div className="flex h-8 items-center justify-between rounded-md border px-2.5">
-                <Label
-                  htmlFor="rg-allow-x"
-                  className="text-xs text-muted-foreground cursor-pointer"
-                >
-                  Permitir dígito &quot;X&quot;
-                </Label>
-                <Switch
-                  id="rg-allow-x"
-                  checked={state.allowX ?? true}
-                  onCheckedChange={(checked) =>
-                    setState({ ...state, allowX: checked })
-                  }
-                />
-              </div>
-            )}
-          />
-
-          <GeneratorCard
-            title="CEP"
-            description="Faixas postais dos Correios"
-            generator={generateCEP}
-            formatter={formatCEP}
-            initialOptions={{ region: 'any' }}
-            optionsComponent={(state, setState) => (
-              <Select
-                value={state.region || 'any'}
-                onValueChange={(value) => setState({ ...state, region: value })}
-              >
-                <SelectTrigger size="sm" aria-label="Região postal do CEP">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CEP_REGIONS.map((item) => (
-                    <SelectItem key={item.code} value={item.code}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-
-          <GeneratorCard
-            title="Cartão de Crédito"
-            description="Prefixos reais com Luhn"
-            generator={generateCreditCard}
-            formatter={formatCreditCard}
-            initialOptions={{ brand: 'any' }}
-            optionsComponent={(state, setState) => (
-              <Select
-                value={state.brand || 'any'}
-                onValueChange={(value) => setState({ ...state, brand: value })}
-              >
-                <SelectTrigger size="sm" aria-label="Bandeira do cartão">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CARD_BRANDS.map((item) => (
-                    <SelectItem key={item.code} value={item.code}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-
-          <GeneratorCard
-            title="Data"
-            description="DD/MM/AAAA ou AAAA-MM-DD"
-            generator={generateDate}
-            formatter={formatDate}
-            initialOptions={{ preset: 'any' }}
-            optionsComponent={(state, setState) => (
-              <Select
-                value={state.preset || 'any'}
-                onValueChange={(value) => setState({ ...state, preset: value })}
-              >
-                <SelectTrigger size="sm" aria-label="Período da data">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DATE_PRESETS.map((item) => (
-                    <SelectItem key={item.code} value={item.code}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-
-          <GeneratorCard
-            title="Telefone"
-            description="67 DDDs oficiais da Anatel"
-            generator={generatePhone}
-            formatter={formatPhone}
-            className="sm:col-span-2"
-            initialOptions={{ type: 'any', uf: 'any' }}
-            optionsComponent={(state, setState) => (
-              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                <RadioGroup
-                  value={state.type || 'any'}
-                  onValueChange={(value) => setState({ ...state, type: value })}
-                  className="flex flex-wrap items-center gap-4"
-                  aria-label="Tipo de telefone"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="any" id="phone-any" />
-                    <Label htmlFor="phone-any" className="cursor-pointer text-xs font-normal">
-                      Qualquer
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="mobile" id="phone-mobile" />
-                    <Label htmlFor="phone-mobile" className="cursor-pointer text-xs font-normal">
-                      Celular
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="landline" id="phone-landline" />
-                    <Label htmlFor="phone-landline" className="cursor-pointer text-xs font-normal">
-                      Fixo
-                    </Label>
-                  </div>
-                </RadioGroup>
-
-                <div className="sm:w-56">
-                  <Select
-                    value={state.uf || 'any'}
-                    onValueChange={(value) => setState({ ...state, uf: value })}
-                  >
-                    <SelectTrigger size="sm" aria-label="Estado do DDD">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Todos os estados (DDD)</SelectItem>
-                      {UFS.map((uf) => (
-                        <SelectItem key={uf} value={uf}>
-                          {uf} ({BRAZIL_DDDS_BY_UF[uf].join(', ')})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-          />
+        <section className="generator-panel" aria-label="Geradores de dados brasileiros">
+          <div className="column-headings" aria-hidden="true">
+            <span>Gerador</span><span>Configurações</span><span>Resultado</span>
+            <span className="format-heading">Máscara</span><span className="actions-heading">Ações</span>
+          </div>
+          {GENERATORS.map((item) => (
+            <GeneratorCard key={item.id} {...item} active={activeGenerator === item.id}
+              ref={(handle) => { generatorRefs.current[item.id] = handle }} />
+          ))}
         </section>
+
+        <footer className="workspace-footer">
+          <span><ShieldCheck aria-hidden="true" />Seus dados não saem deste navegador.</span>
+          <span>Dados fictícios. Apenas para desenvolvimento e testes.</span>
+        </footer>
       </main>
     </div>
   )
